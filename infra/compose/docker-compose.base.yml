@@ -1,0 +1,93 @@
+name: custodian
+
+networks:
+  custodian-net:
+    external: true
+    name: custodian-net
+
+volumes:
+  postgres-data:
+  localstack-data:
+
+services:
+  postgres:
+    image: postgres:18.4-alpine
+    container_name: custodian-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: postgres
+      PGPASS_KEYCLOAK: ${PGPASS_KEYCLOAK}
+      PGPASS_INFISICAL: ${PGPASS_INFISICAL}
+      PGPASS_LITELLM: ${PGPASS_LITELLM}
+      PGPASS_MLFLOW: ${PGPASS_MLFLOW}
+      PGPASS_LANGFUSE: ${PGPASS_LANGFUSE}
+      PGPASS_CUSTODIAN_LEDGER: ${PGPASS_CUSTODIAN_LEDGER}
+      PGPASS_CUSTODIAN_BACKEND: ${PGPASS_CUSTODIAN_BACKEND}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ../postgres-init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - custodian-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1024M
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: custodian-localstack
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=us-east-1
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+      - DISABLE_EVENTS=1  # <--- Bypasses telemetry and license checks
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - custodian-net
+    healthcheck:
+      test: 'curl -s http://localhost:4566/_localstack/health | grep -q "\"s3\": \"\\(running\\|available\\)\""'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  localstack-init:
+    image: localstack/localstack:latest
+    container_name: custodian-localstack-init
+    depends_on:
+      localstack:
+        condition: service_healthy
+    networks:
+      - custodian-net
+    restart: "no"
+    entrypoint: ["/bin/sh", "/init/init-buckets.sh"]
+    environment:
+      AWS_ACCESS_KEY_ID: mock_access_key
+      AWS_SECRET_ACCESS_KEY: mock_secret_key
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+    volumes:
+      - ../localstack-init:/init:ro
