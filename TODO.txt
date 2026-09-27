@@ -1,0 +1,26 @@
+custodian-litellm	Up 4 seconds (health: starting)	Crash-looping — 4 seconds up after 1 hour of Redis being healthy
+custodian-data-loader	Exited (1)	Failed — exit code 1
+
+
+
+Day 1:  policy-service/cedar_engine.py        (~60 lines)
+        policy-service/main.py                (~100 lines)
+        policies/*.cedar  (one file)          (~15 lines)
+
+Day 2:  deepeval/eval_gate.py                 (~250 lines)
+        deepeval/prompts/extraction_v1.txt
+        deepeval/prompts/extraction_v2.txt
+
+Day 3:  custodian-backend/app/main.py         (~400 lines — 4 routes = 4 agents)
+
+Day 4:  custodian-backend/app/identity.py     (~80 lines)
+        custodian-backend/app/ledger_client.py (~100 lines)
+
+Day 5:  policy-service/temporal.py            (~60 lines)
+        custodian-audit-log/app/main.py       (~100 lines)
+
+Day 6:  re-read the 4 agent routes with the full stack running.
+        Trigger a real invoice in the UI, watch logs live.
+
+Day 7:  Write SUMMARY.md — 1 page explaining the whole flow.
+
