@@ -1,0 +1,6 @@
+cd "D:/AgenticAI_Projects/BankPaymentInvoiceAutomation"
+
+sh infra/scripts/compose.sh build custodian-backend
+sh infra/scripts/compose.sh up -d --force-recreate custodian-backend
+sleep 20
+docker ps --filter name=custodian-backend --format "{{.Names}} | {{.Status}}"

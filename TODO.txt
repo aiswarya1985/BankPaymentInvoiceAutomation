@@ -24,3 +24,85 @@ Day 6:  re-read the 4 agent routes with the full stack running.
 
 Day 7:  Write SUMMARY.md — 1 page explaining the whole flow.
 
+
+
+# CUSTODIAN RESUME
+
+**Last updated:** 2026-09-27
+**Repo:** `D:\AgenticAI_Projects\BankPaymentInvoiceAutomation`
+**Chat link (bookmark):** https://chat.deepseek.com/a/chat/s/8b551321-b096-4987-96c4-680b56d63203
+
+---
+
+## 1. CURRENT STATE — Stack is RUNNING
+
+Every container is healthy or Up, except one optional service.
+
+| Service | Status |
+|---|---|
+| postgres | ✅ healthy |
+| localstack | ✅ healthy |
+| keycloak | ✅ healthy |
+| spire-server | ✅ healthy |
+| spire-agent | ✅ Up (SVID expires ~1hr after idle) |
+| infisical | ✅ healthy |
+| infisical-redis | ✅ healthy |
+| om-postgres | ✅ healthy |
+| om-elasticsearch | ✅ healthy |
+| om-server | ✅ healthy |
+| presidio-analyzer | ✅ healthy |
+| presidio-anonymizer | ✅ healthy |
+| litellm | ✅ healthy |
+| litellm-redis | ✅ healthy |
+| mlflow | ✅ healthy |
+| policy-service | ✅ healthy |
+| audit-log | ✅ healthy |
+| control-plane | ✅ healthy |
+| custodian-ledger | ✅ healthy |
+| custodian-backend | ✅ healthy |
+| sandbox-runner | ✅ healthy |
+| custodian-console | ✅ healthy |
+| prometheus | ✅ healthy |
+| grafana | ✅ healthy |
+| langfuse-clickhouse | ✅ healthy |
+| langfuse-redis | ✅ healthy |
+| langfuse-worker | ✅ healthy |
+| **langfuse-web** | ⚠️ Restarting — optional, can stop with `docker stop custodian-langfuse-web` |
+| **custodian-sandbox-ocr:latest** | ✅ image built (513 MB) |
+
+**Data loaded:**
+- `custodian_backend.invoices` = 500 rows
+- `custodian_ledger.vendors` = 157 rows
+- `custodian_ledger.historical_payments` = 300 rows
+
+---
+
+## 2. CURRENT BUG (first task tomorrow)
+
+Console page **"Live invoice pipeline"** shows:
+> Failed to load runs: Internal Server Error
+
+**Backend traceback:**
+
+ON RESUME — FIRST COMMAND TO RUN
+
+cd "D:/AgenticAI_Projects/BankPaymentInvoiceAutomation"
+docker ps --filter "name=custodian" --format "table {{.Names}}\t{{.Status}}"
+
+┌─────────────────────────────────────────────────┐
+│  1. policy-service/       (Python, ~220 lines)   │
+│     - cedar_engine.py     ← loads .cedar rules    │
+│     - main.py             ← the 3-gate authorize  │
+│     - temporal.py         ← rate-limit SQL        │
+├─────────────────────────────────────────────────┤
+│  2. custodian-backend/app/ (Python, ~600 lines)  │
+│     - main.py             ← the 4 agents          │
+│     - identity.py         ← SPIRE SVID fetch      │
+│     - ledger_client.py    ← Infisical secrets     │
+├─────────────────────────────────────────────────┤
+│  3. deepeval/eval_gate.py  (Python, ~250 lines)  │
+│     - scores 2 prompts, promotes 1, blocks 1      │
+├─────────────────────────────────────────────────┤
+│  4. custodian-audit-log/   (Python, ~100 lines)  │
+│     - records every decision to immutable storage │
+└─────────────────────────────────────────────────┘

@@ -5,20 +5,38 @@ import psycopg
 import requests
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket
 from pydantic import BaseModel
-
+from loguru import logger
 from .control_plane_client import TERMINAL_TASK_STATES, SessionHalted, ensure_not_halted, pause_thread
 from .graph import build_graph
 from .identity import current_identity, fetch_identity
 from .tracing import setup_tracing
+import sys
 
 SANDBOX_RUNNER_URL = os.environ.get("SANDBOX_RUNNER_URL", "http://sandbox-runner:8000")
 UPLOAD_DIR = "/data/invoices/uploads"
+
+
+logger.remove()
+logger.add(
+    sys.stdout,
+    level="DEBUG",
+    format="{time:HH:mm:ss.SSS} | {level:<7} | {message}",
+)
+logger.add(
+    "/logs/backend.log",
+    level="DEBUG",
+    rotation="10 MB",
+    retention="7 days",
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<7} | {message}",
+    enqueue=True,
+)
 
 # No valid identity, no action (Identity Governance, INSTRUCTIONS.md 5.1):
 # module-level, not inside a startup hook, so the process never reaches a
 # state where it could serve a request without first proving who it is - a
 # failure here crashes the container instead of coming up falsely healthy.
 fetch_identity()
+logger.info(f"BACKEND STARTED  spiffe_id={current_identity()}")
 
 app = FastAPI(title="custodian-backend", version="1.0.0")
 setup_tracing(app)
@@ -45,11 +63,13 @@ class StartRunRequest(BaseModel):
 
 @app.post("/runs")
 def start_run(req: StartRunRequest):
+    logger.info("starting start_run ")
     return _run_pipeline(invoice_id=req.invoice_id, ocr_text=req.ocr_text, source=req.source)
 
 
 def _run_pipeline(invoice_id: str, ocr_text: str, source: str):
     thread_id = invoice_id
+    logger.info(f"invoice Id:{thread_id}")
     try:
         ensure_not_halted(thread_id)
     except SessionHalted as e:
@@ -67,6 +87,7 @@ def _run_pipeline(invoice_id: str, ocr_text: str, source: str):
         "audit_trail": [],
         "task_state": "submitted",
     }
+    logger.info(f"Initial_state:{initial_state}")
     config = {"configurable": {"thread_id": thread_id}}
     result = graph.invoke(initial_state, config=config)
     _pause_if_terminal(thread_id, result)

@@ -175,6 +175,7 @@ services:
       # OCR container can then read it via its own read-only mount.
       - invoice-images:/data/invoices
       - spire-agent-sockets:/run/spire/sockets:ro
+      - ../../logs:/logs
     ports:
       - "127.0.0.1:8000:8000"
     networks:
