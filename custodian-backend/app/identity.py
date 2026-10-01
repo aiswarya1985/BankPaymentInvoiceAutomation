@@ -12,6 +12,7 @@ SPIRE entries can never actually be issued to it (SPIRE attests one identity
 per workload; all 4 agents run as function calls inside this one process).
 """
 from spiffe.workloadapi.workload_api_client import WorkloadApiClient
+from loguru import logger
 
 _identity = {"spiffe_id": None}
 
@@ -23,6 +24,8 @@ def fetch_identity() -> str:
     with WorkloadApiClient() as client:
         svid = client.fetch_x509_svid(timeout=10)
     _identity["spiffe_id"] = str(svid.spiffe_id)
+    logger.info("entering fetch_identity ")
+    logger.info(f"spifee id:{_identity["spiffe_id"]}")
     return _identity["spiffe_id"]
 
 
@@ -30,4 +33,5 @@ def current_identity() -> str | None:
     """The SPIFFE ID fetched at startup, or None if fetch_identity() hasn't
     run yet - exposed for /health so the real identity is externally
     verifiable, not just trusted on faith."""
+    logger.info("entering current_identity ")
     return _identity["spiffe_id"]

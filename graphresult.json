@@ -1,0 +1,146 @@
+{
+  "invoice_id": "upload-1790735997839",
+  "ocr_text": "OFFICE DEPOT #4471\n\n455 Commerce Blvd, Austin TX\nDate: 2026-08-10\n\nTotal: 94.20\n",
+  "source": "image-upload",
+  "extraction": {
+    "vendor": "OFFICE DEPOT #4471",
+    "date": "2026-08-10",
+    "address": "455 Commerce Blvd, Austin TX",
+    "total": 94.2,
+    "confidence": 1.0
+  },
+  "risk": {
+    "risk_level": "low",
+    "risk_score": 0.05,
+    "reasons": [
+      "Vendor is known and not first seen.",
+      "Historical payment count is 7 with consistent amount of $94.20.",
+      "Current invoice amount matches exactly the vendor's average and past amounts.",
+      "No deviation in amount pattern, date appears plausible.",
+      "No other anomalies detected."
+    ],
+    "confidence": 0.96,
+    "vendor_first_seen": false
+  },
+  "approval": {
+    "decision": "auto_approve",
+    "reasoning": "The invoice is low risk: the vendor is established, the $94.20 total exactly matches seven consistent historical payments and the vendor average, the date is plausible, extraction confidence is 1.0, and no anomalies were detected.",
+    "confidence": 0.96
+  },
+  "critic": {
+    "agrees": true,
+    "concerns": [],
+    "confidence": 0.99
+  },
+  "payment": {
+    "status": "settled",
+    "ledger_transaction_id": 8
+  },
+  "task_state": "settled",
+  "audit_trail": [
+    {
+      "step": "guardrail_check",
+      "agent": "extraction",
+      "safe": true,
+      "severity": "none",
+      "reason": "The OCR text contains only standard invoice details: merchant name, address, date, and total amount. No instructions or redirection claims are present."
+    },
+    {
+      "step": "pii_scan",
+      "agent": "extraction",
+      "entities_found": ["DATE_TIME", "LOCATION"],
+      "redacted_ocr_text": "OFFICE DEPOT #4471\n\n455 Commerce Blvd, <LOCATION>\nDate: <DATE_TIME>\n\nTotal: 94.20\n"
+    },
+    {
+      "step": "extraction",
+      "agent": "extraction",
+      "result": {
+        "vendor": "OFFICE DEPOT #4471",
+        "date": "2026-08-10",
+        "address": "455 Commerce Blvd, Austin TX",
+        "total": 94.2,
+        "confidence": 1.0
+      }
+    },
+    {
+      "step": "vendor_lookup",
+      "agent": "risk-scoring",
+      "vendor": "OFFICE DEPOT #4471",
+      "result": {
+        "known": true,
+        "first_seen": "2026-09-28",
+        "award_count": 7,
+        "avg_amount": 94.2,
+        "recent_amounts": [94.2, 94.2, 94.2, 94.2, 94.2, 94.2, 94.2]
+      }
+    },
+    {
+      "step": "risk_scoring",
+      "agent": "risk-scoring",
+      "model": "custodian-routine",
+      "result": {
+        "risk_level": "low",
+        "risk_score": 0.05,
+        "reasons": [
+          "Vendor is known and not first seen.",
+          "Historical payment count is 7 with consistent amount of $94.20.",
+          "Current invoice amount matches exactly the vendor's average and past amounts.",
+          "No deviation in amount pattern, date appears plausible.",
+          "No other anomalies detected."
+        ],
+        "confidence": 0.96,
+        "vendor_first_seen": false
+      }
+    },
+    {
+      "step": "approval_decision",
+      "agent": "approval",
+      "result": {
+        "decision": "auto_approve",
+        "reasoning": "The invoice is low risk: the vendor is established, the $94.20 total exactly matches seven consistent historical payments and the vendor average, the date is plausible, extraction confidence is 1.0, and no anomalies were detected.",
+        "confidence": 0.96
+      }
+    },
+    {
+      "step": "critic_review",
+      "agent": "critic(groq)",
+      "result": {
+        "agrees": true,
+        "concerns": [],
+        "confidence": 0.99
+      }
+    },
+    {
+      "step": "ledger_dry_run",
+      "result": {
+        "valid": true,
+        "resulting_balances": {
+          "vendor-expense": 753.6,
+          "operating-cash": 499246.4
+        }
+      }
+    },
+    { "step": "settlement_hold_start", "hold_seconds": 20 },
+    { "step": "settlement_hold_cleared" },
+    {
+      "step": "ledger_commit",
+      "result": {
+        "transaction_id": 8,
+        "idempotency_key": "invoice-upload-1790735997839",
+        "created_at": "2026-09-30T02:40:30.105463+00:00",
+        "entries": [
+          { "account": "vendor-expense", "direction": "debit", "amount": 94.2 },
+          { "account": "operating-cash", "direction": "credit", "amount": 94.2 }
+        ]
+      }
+    },
+    {
+      "step": "vendor_history_recorded",
+      "result": {
+        "vendor_name": "OFFICE DEPOT #4471",
+        "created": false,
+        "award_count": 8
+      }
+    }
+  ]
+}

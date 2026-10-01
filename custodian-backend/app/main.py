@@ -90,6 +90,7 @@ def _run_pipeline(invoice_id: str, ocr_text: str, source: str):
     logger.info(f"Initial_state:{initial_state}")
     config = {"configurable": {"thread_id": thread_id}}
     result = graph.invoke(initial_state, config=config)
+    logger.info(f"result:{result}")
     _pause_if_terminal(thread_id, result)
     return {"thread_id": thread_id, "state": result}
 
@@ -106,6 +107,7 @@ async def start_run_from_image(
     sandboxed container), not a shortcut around either the OCR sandbox or
     the governed graph."""
     try:
+        logger.info("entering start_run_from_image ")
         ensure_not_halted(invoice_id)
     except SessionHalted as e:
         raise HTTPException(status_code=423, detail=str(e))
@@ -122,6 +124,7 @@ async def start_run_from_image(
             json={"image_path": dest_path, "invoice_id": invoice_id},
             timeout=60,
         )
+        logger.info(f"resp from start_run_from_image:{resp}")
         resp.raise_for_status()
     except requests.RequestException as e:
         detail = e.response.text if getattr(e, "response", None) is not None else str(e)
@@ -134,12 +137,14 @@ async def start_run_from_image(
 def _pause_if_terminal(thread_id: str, result: dict):
     """A finished run never heartbeats again - without this the watchdog
     eventually treats "done" as "agent went silent" and halts it."""
+    logger.info("entering _pause_if_terminal ")
     if result.get("task_state") in TERMINAL_TASK_STATES:
         pause_thread(thread_id, reason=f"run reached terminal state {result.get('task_state')!r}")
 
 
 @app.get("/runs/{thread_id}")
 def get_run(thread_id: str):
+    logger.info("entering get_run ")
     graph = get_graph()
     config = {"configurable": {"thread_id": thread_id}}
     snapshot = graph.get_state(config)
@@ -152,7 +157,7 @@ def get_run(thread_id: str):
 def list_runs(limit: int = 50):
     """Thread listing straight from the checkpointer's own Postgres table
     (LangGraph has no generic list-threads call); each thread's state is
-    read back through the same get_state() path /runs/{id} uses."""
+    read back through the same get_state() path /runs/{id} uses."""   
     db_uri = (
         f"postgresql://custodian_backend:{os.environ['PGPASS_CUSTODIAN_BACKEND']}"
         f"@{os.environ.get('POSTGRES_HOST', 'postgres')}:{os.environ.get('POSTGRES_PORT', '5432')}/custodian_backend"
@@ -179,7 +184,7 @@ def list_runs(limit: int = 50):
             "risk": snapshot.values.get("risk"),
             "requires_human": snapshot.values.get("requires_human", False),
             "next": list(snapshot.next),
-        })
+        })       
     return {"runs": runs}
 
 
@@ -206,6 +211,7 @@ def resume_run(thread_id: str, req: ResumeRequest):
 @app.websocket("/runs/{thread_id}/stream")
 async def stream_run(websocket: WebSocket, thread_id: str):
     """Live, step-by-step view of a run in progress."""
+    logger.info("entering stream run")
     await websocket.accept()
     graph = get_graph()
     config = {"configurable": {"thread_id": thread_id}}

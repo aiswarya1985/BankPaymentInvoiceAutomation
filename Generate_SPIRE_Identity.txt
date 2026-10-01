@@ -1,0 +1,64 @@
+
+Step 1 — Stop the SPIRE + backend containers
+
+cd "D:/AgenticAI_Projects/BankPaymentInvoiceAutomation"
+sh infra/scripts/compose.sh stop custodian-backend spire-agent spire-server
+
+
+Step 2 — Remove all SPIRE containers (including init jobs)
+
+docker rm -f custodian-spire-agent custodian-spire-server custodian-spire-server-data-init custodian-spire-agent-data-init custodian-backend 2>&1
+
+step 3:
+
+docker ps -a --filter name=custodian-spire --format "{{.Names}}"
+docker ps -a --filter volume=custodian_spire-server-data --format "{{.Names}}"
+docker ps -a --filter volume=custodian_spire-agent-data --format "{{.Names}}"
+docker ps -a --filter volume=custodian_spire-agent-sockets --format "{{.Names}}"
+
+Step 4 — Wipe the SPIRE volumes
+
+docker volume rm custodian_spire-server-data custodian_spire-agent-data custodian_spire-agent-sockets
+
+step5:  confirm volume gone
+
+docker volume ls | grep -i spire || echo "✓ no spire volumes — good"
+
+Step 6 — Start a fresh SPIRE server
+
+sh infra/scripts/compose.sh up -d spire-server
+sleep 20
+docker ps --filter name=custodian-spire-server --format "{{.Names}} | {{.Status}}"
+
+Step 7 — Register the 5 SPIFFE entries
+
+sh infra/scripts/register-spire-entries.sh 2>&1 | tail -8
+
+
+
+Step 8 — Generate the SPIFFE join token (this is what you asked for)
+
+sh infra/scripts/setup-spire.sh
+
+
+Step 9 — Start the SPIRE agent with the fresh token
+
+sh infra/scripts/compose.sh up -d --force-recreate spire-agent
+sleep 25
+docker ps --filter name=custodian-spire-agent --format "{{.Names}} | {{.Status}}"
+docker logs custodian-spire-agent --tail 15
+
+Step 10 — Verify the socket exists
+
+docker run --rm -v custodian_spire-agent-sockets:/sock alpine sh -c "ls -la /sock/"
+
+Step 11 — Start the backend
+
+sh infra/scripts/compose.sh up -d custodian-backend
+sleep 25
+docker ps --filter name=custodian-backend --format "{{.Names}} | {{.Status}}"
+docker logs custodian-backend --tail 15
+
+
+
+
